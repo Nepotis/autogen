@@ -604,11 +604,12 @@ class OpenAIWrapper:
                 # Legacy cache behavior, if cache_seed is given, use DiskCache.
                 cache_client = Cache.disk(cache_seed, LEGACY_CACHE_DIR)
 
+            start_ts = get_current_ts()
+
             if cache_client is not None:
                 with cache_client as cache:
                     # Try to get the response from cache
                     key = get_key(params)
-                    request_ts = get_current_ts()
 
                     response: ModelClient.ModelClientResponseProtocol = cache.get(key, None)
 
@@ -634,7 +635,7 @@ class OpenAIWrapper:
                                 response=response,
                                 is_cached=1,
                                 cost=response.cost,
-                                start_time=request_ts,
+                                start_time=start_ts,
                             )
 
                         # check the filter
@@ -647,7 +648,7 @@ class OpenAIWrapper:
                             return response
                         continue  # filter is not passed; try the next config
             try:
-                request_ts = get_current_ts()
+                start_ts = get_current_ts()
                 response = client.create(params)
             except APITimeoutError as err:
                 logger.debug(f"config {i} timed out", exc_info=True)
@@ -667,7 +668,7 @@ class OpenAIWrapper:
                         response=f"error_code:{error_code}, config {i} failed",
                         is_cached=0,
                         cost=0,
-                        start_time=request_ts,
+                        start_time=start_ts,
                     )
 
                 if error_code == "content_filter":
@@ -698,7 +699,7 @@ class OpenAIWrapper:
                         response=response,
                         is_cached=0,
                         cost=response.cost,
-                        start_time=request_ts,
+                        start_time=start_ts,
                     )
 
                 response.message_retrieval_function = client.message_retrieval
